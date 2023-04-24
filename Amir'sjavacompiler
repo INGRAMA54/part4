@@ -1,0 +1,389 @@
+
+
+import java.util.*;
+
+public class SemanticAnalyzer {
+    private Map<String, TokenType> variables = new HashMap<>();
+
+    /**
+     * Analyze the given AST for semantic errors
+     */
+    public void analyze(ProgramNode program) throws SemanticException {
+        // Traverse the AST and analyze each statement
+        for (StatementNode statement : program.getStatements()) {
+            analyzeStatement(statement);
+        }
+    }
+
+    /**
+     * Analyze a single statement for semantic errors
+     */
+    private void analyzeStatement(StatementNode statement) throws SemanticException {
+        if (statement instanceof DeclarationNode) {
+            analyzeDeclaration((DeclarationNode) statement);
+        } else if (statement instanceof IfStatementNode) {
+            analyzeIfStatement((IfStatementNode) statement);
+        } else if (statement instanceof WhileStatementNode) {
+            analyzeWhileStatement((WhileStatementNode) statement);
+        } else if (statement instanceof ForStatementNode) {
+            analyzeForStatement((ForStatementNode) statement);
+        } else if (statement instanceof FunctionDeclarationNode) {
+            analyzeFunctionDeclaration((FunctionDeclarationNode) statement);
+        } else if (statement instanceof ExpressionStatementNode) {
+            analyzeExpression(((ExpressionStatementNode) statement).getExpression());
+        }
+    }
+
+    /**
+     * Analyze a variable declaration for semantic errors
+     */
+    private void analyzeDeclaration(DeclarationNode declaration) throws SemanticException {
+        // Check if the variable has already been declared in this scope
+        if (variables.containsKey(declaration.getIdentifier())) {
+            throw new SemanticException("Variable " + declaration.getIdentifier() + " already declared in this scope");
+        }
+        // Add the variable to the symbol table
+        variables.put(declaration.getIdentifier(), declaration.getType());
+
+        // Analyze the initialization expression, if any
+        if (declaration.getExpression() != null) {
+            analyzeExpression(declaration.getExpression());
+            TokenType declaredType = declaration.getType();
+            TokenType expressionType = declaration.getExpression().getType();
+            if (!typesAreCompatible(declaredType, expressionType)) {
+                throw new SemanticException("Type mismatch in variable initialization: declared " + declaredType
+                    + ", found " + expressionType);
+            }
+        }
+    }
+
+    /**
+     * Analyze an if statement for semantic errors
+     */
+    private void analyzeIfStatement(IfStatementNode ifStatement) throws SemanticException {
+        analyzeExpression(ifStatement.getCondition());
+
+        // Analyze the true branch
+        for (StatementNode statement : ifStatement.getTrueStatements()) {
+            analyzeStatement(statement);
+        }
+
+        // Analyze the false branch, if any
+        if (ifStatement.getFalseStatements() != null) {
+            for (StatementNode statement : ifStatement.getFalseStatements()) {
+                analyzeStatement(statement);
+            }
+        }
+    }
+
+    /**
+     * Analyze a while statement for semantic errors
+     */
+    private void analyzeWhileStatement(WhileStatementNode whileStatement) throws SemanticException {
+        analyzeExpression(whileStatement.getCondition());
+        for (StatementNode statement : whileStatement.getStatements()) {
+            analyzeStatement(statement);
+        }
+    }
+
+    /**
+     * Analyze a for statement for semantic errors
+     */
+    private void analyzeForStatement(ForStatementNode forStatement) throws SemanticException {
+        // Analyze the initialization expression, if any
+        if (forStatement.getInitialization() != null) {
+            analyzeExpression(forStatement.getInitialization());
+        }
+
+        // Analyze the condition expression, if any
+        if (forStatement.getCondition() != null) {
+            analyzeExpression(forStatement.getCondition());
+        }
+
+        // Analyze the update expression, if any
+        if (forStatement.getUpdate() != null) {
+            analyze
+
+class SemanticAnalyzer {
+    private SymbolTable symbolTable;
+
+    public SemanticAnalyzer() {
+        symbolTable = new SymbolTable();
+    }
+
+    public void analyze(ProgramNode program) throws SemanticException {
+        program.accept(this.symbolTable);
+    }
+}
+
+class SymbolTable {
+    private Map<String, Type> variables;
+
+    public SymbolTable() {
+        variables = new HashMap<>();
+    }
+
+    public void addVariable(String name, Type type) throws SemanticException {
+        if (variables.containsKey(name)) {
+            throw new SemanticException("Variable " + name + " has already been declared");
+        }
+
+        variables.put(name, type);
+    }
+
+    public Type lookupVariable(String name) throws SemanticException {
+        Type type = variables.get(name);
+        if (type == null) {
+            throw new SemanticException("Variable " + name + " has not been declared");
+        }
+        return type;
+    }
+
+    public void visit(DeclarationNode node) throws SemanticException {
+        String name = node.getVariableName();
+        Type type = node.getType();
+        addVariable(name, type);
+    }
+
+    public void visit(AssignmentNode node) throws SemanticException {
+        String name = node.getVariableName();
+        Type expectedType = lookupVariable(name);
+        Type actualType = node.getExpression().getType();
+
+        if (!actualType.equals(expectedType)) {
+            throw new SemanticException("Type mismatch for variable " + name);
+        }
+    }
+
+    public void visit(IfStatementNode node) throws SemanticException {
+        ExpressionNode condition = node.getCondition();
+        Type conditionType = condition.getType();
+        if (conditionType != Type.BOOLEAN) {
+            throw new SemanticException("Condition in if statement must be a boolean expression");
+        }
+        visit(node.getIfBlock());
+        BlockNode elseBlock = node.getElseBlock();
+        if (elseBlock != null) {
+            visit(elseBlock);
+        }
+    }
+
+    public void visit(WhileStatementNode node) throws SemanticException {
+        ExpressionNode condition = node.getCondition();
+        Type conditionType = condition.getType();
+        if (conditionType != Type.BOOLEAN) {
+            throw new SemanticException("Condition in while statement must be a boolean expression");
+        }
+        visit(node.getBlock());
+    }
+
+    public void visit(ForStatementNode node) throws SemanticException {
+        DeclarationNode initialization = node.getInitialization();
+        if (initialization != null) {
+            visit(initialization);
+        }
+
+        ExpressionNode condition = node.getCondition();
+        if (condition != null) {
+            Type conditionType = condition.getType();
+            if (conditionType != Type.BOOLEAN) {
+                throw new SemanticException("Condition in for statement must be a boolean expression");
+            }
+        }
+
+        ExpressionNode update = node.getUpdate();
+        if (update != null) {
+            visit(update);
+        }
+
+        visit(node.getBlock());
+    }
+
+    public void visit(FunctionDeclarationNode node) throws SemanticException {
+        String name = node.getName();
+        Type returnType = node.getReturnType();
+
+        if (variables.containsKey(name)) {
+            throw new SemanticException("Function " + name + " has already been declared");
+        }
+
+        variables.put(name, returnType);
+
+        SymbolTable localSymbolTable = new SymbolTable();
+
+        List<ParameterNode> parameters = node.getParameters();
+        for (ParameterNode parameter : parameters) {
+            localSymbolTable.addVariable(parameter.getName(), parameter.getType());
+        }
+
+        visit(node.getBlock(), localSymbolTable);
+    }
+
+    public void visit(BlockNode node) throws SemanticException {
+        visit(node, this);
+    }
+
+    public void visit(BlockNode node, SymbolTable symbolTable) throws SemanticException {
+        List<StatementNode> statements = node.getStatements();
+        for (Statement
+
+class SemanticAnalyzer {
+    private SymbolTable symbolTable;
+
+    public SemanticAnalyzer() {
+        this.symbolTable = new SymbolTable();
+    }
+
+    public void analyze(ASTNode node) throws SemanticException {
+        switch (node.getType()) {
+            case PROGRAM:
+                analyzeProgram(node);
+                break;
+            case DECLARATION:
+                analyzeDeclaration(node);
+                break;
+            case FUNCTION:
+                analyzeFunction(node);
+                break;
+            case ASSIGNMENT:
+                analyzeAssignment(node);
+                break;
+            case IF_STATEMENT:
+                analyzeIfStatement(node);
+                break;
+            case WHILE_STATEMENT:
+                analyzeWhileStatement(node);
+                break;
+            case FOR_STATEMENT:
+                analyzeForStatement(node);
+                break;
+            case FUNCTION_CALL:
+                analyzeFunctionCall(node);
+                break;
+            case VARIABLE:
+                analyzeVariable(node);
+                break;
+            case EXPRESSION:
+                analyzeExpression(node);
+                break;
+            case PARAMETER_LIST:
+                analyzeParameterList(node);
+                break;
+            default:
+                throw new SemanticException("Invalid AST node type: " + node.getType());
+        }
+    }
+
+    private void analyzeProgram(ASTNode node) throws SemanticException {
+        for (ASTNode statement : node.getChildren()) {
+            analyze(statement);
+        }
+    }
+
+    private void analyzeDeclaration(ASTNode node) throws SemanticException {
+        String type = node.getChild(0).getTokenValue();
+        String id = node.getChild(1).getTokenValue();
+
+        if (symbolTable.lookup(id) != null) {
+            throw new SemanticException("Variable " + id + " has already been declared");
+        }
+
+        Symbol symbol = new Symbol(id, type);
+        symbolTable.add(symbol);
+
+        if (node.getChildren().size() > 2) {
+            ASTNode expression = node.getChild(2);
+            analyze(expression);
+
+            String expressionType = expression.getSemanticType();
+            if (!type.equals(expressionType)) {
+                throw new SemanticException("Type mismatch in variable declaration " + id);
+            }
+        }
+    }
+
+    private void analyzeFunction(ASTNode node) throws SemanticException {
+        String returnType = node.getChild(0).getTokenValue();
+        String functionName = node.getChild(1).getTokenValue();
+
+        if (symbolTable.lookup(functionName) != null) {
+            throw new SemanticException("Function " + functionName + " has already been declared");
+        }
+
+        Symbol functionSymbol = new Symbol(functionName, returnType, SymbolType.FUNCTION);
+        symbolTable.add(functionSymbol);
+
+        if (node.getChildCount() > 3) {
+            ASTNode parameterList = node.getChild(2);
+            analyzeParameterList(parameterList);
+        }
+
+        ASTNode functionBody = node.getChild(node.getChildCount() - 1);
+        analyze(functionBody);
+
+        String functionReturnType = functionBody.getSemanticType();
+        if (!returnType.equals(functionReturnType)) {
+            throw new SemanticException("Return type mismatch in function " + functionName);
+        }
+    }
+
+    private void analyzeAssignment(ASTNode node) throws SemanticException {
+        String id = node.getChild(0).getTokenValue();
+        Symbol symbol = symbolTable.lookup(id);
+
+        if (symbol == null) {
+            throw new SemanticException("Variable " + id + " has not been declared");
+        }
+
+        ASTNode expression = node.getChild(1);
+        analyze(expression);
+
+        String expressionType = expression.getSemanticType();
+        if (!symbol.getType().equals(expressionType)) {
+            throw new SemanticException("Type mismatch in assignment to variable " + id);
+        }
+    }
+
+    private void analyzeIfStatement(ASTNode node) throws SemanticException {
+        ASTNode condition = node.getChild(0);
+        analyze(condition);
+
+        if (!condition.getSemanticType().equals("bool")) {
+            throw new
+
+/**
+ * Implements code generation for the SPL program.
+ */
+class CodeGenerator {
+  private final ASTNode program;
+
+  public CodeGenerator(ASTNode program) {
+    this.program = program;
+  }
+
+  /**
+   * Generates JVM bytecode for the program.
+   */
+  public void generate() {
+    // Initialize the JVM bytecode generation framework
+    ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+    MethodVisitor mv;
+
+    // Generate bytecode for the main method
+    mv = cw.visitMethod(Opcodes.ACC_PUBLIC + Opcodes.ACC_STATIC, "main", "([Ljava/lang/String;)V", null, null);
+    program.codegen(mv);
+
+    // Finish generating the class
+    mv.visitInsn(Opcodes.RETURN);
+    mv.visitMaxs(-1, -1);
+    mv.visitEnd();
+    cw.visitEnd();
+
+    // Output the bytecode to a class file
+    try (OutputStream os = new FileOutputStream("Program.class")) {
+      os.write(cw.toByteArray());
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+}
